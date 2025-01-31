@@ -19,15 +19,14 @@ ifeq ($(uname_S), Darwin)
 endif
 
 SRC_FILE = fastpopular.cpp
-EXT_SRC_FILE = external/gzip/gzstream.cpp
 EXE_FILE = fastpopular
 HEADERS = fastpopular.hpp
-EXT_HEADERS = external/chess.hpp external/json.hpp external/threadpool.hpp external/gzip/gzstream.h external/parallel_hashmap/phmap.h fastpopular.hpp
+EXT_HEADERS = external/chess.hpp external/json.hpp external/threadpool.hpp external/zstr/zstr.hpp external/zstr/strict_fstream.hpp external/parallel_hashmap/phmap.h fastpopular.hpp
 
 all: $(EXE_FILE)
 
-$(EXE_FILE): $(SRC_FILE) $(HEADERS) $(EXT_HEADERS) $(EXT_SRC_FILE)
-	$(CXX) $(CXXFLAGS) $(NATIVE) -o $(EXE_FILE) $(SRC_FILE) $(EXT_SRC_FILE) -lz
+$(EXE_FILE): $(SRC_FILE) $(HEADERS) $(EXT_HEADERS)
+	$(CXX) $(CXXFLAGS) $(NATIVE) -o $(EXE_FILE) $(SRC_FILE) -lz -lzstd
 
 format:
 	clang-format -i $(SRC_FILE) $(HEADERS)
