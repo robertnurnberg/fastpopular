@@ -14,8 +14,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "external/bxzstr/bxzstr.hpp"
 #include "external/chess.hpp"
-#include "external/gzip/gzstream.h"
 #include "external/parallel_hashmap/phmap.h"
 #include "external/threadpool.hpp"
 
@@ -185,10 +185,11 @@ public:
       }
 
       board.makeMove<true>(m);
-    } catch (const uci::AmbiguousMoveError &e) {
+    } catch (const std::exception &e) {
       std::cerr << "While parsing " << file << " encountered: " << e.what()
                 << '\n';
       this->skipPgn(true);
+      return;
     }
 
     if (tb_limit > 1) {
@@ -358,14 +359,15 @@ void ana_files(const std::vector<std::string> &files, bool no_frc,
       }
     };
 
+    bxz::Compression ztype = bxz::plaintext;
     if (file.size() >= 3 && file.substr(file.size() - 3) == ".gz") {
-      igzstream input(file.c_str());
-      pgn_iterator(input);
-    } else {
-      std::ifstream pgn_stream(file);
-      pgn_iterator(pgn_stream);
-      pgn_stream.close();
+      ztype = bxz::z;
+    } else if (file.size() >= 4 && file.substr(file.size() - 4) == ".zst") {
+      ztype = bxz::zstd;
     }
+    bxz::ifstream pgn_stream(file, std::ios_base::in, ztype);
+    pgn_iterator(pgn_stream);
+    pgn_stream.close();
 
     ++total_files;
 
@@ -487,8 +489,9 @@ void process(const std::vector<std::string> &files_pgn, bool no_frc,
 
   auto files_chunked = split_chunks(files_pgn, target_chunks);
 
-  std::cout << "Found " << files_pgn.size() << " .pgn(.gz) files, creating "
-            << files_chunked.size() << " chunks for processing." << std::endl;
+  std::cout << "Found " << files_pgn.size()
+            << " .pgn([.gz|.zst]) files, creating " << files_chunked.size()
+            << " chunks for processing." << std::endl;
 
   // Mutex for progress output
   std::mutex progress_output;
@@ -519,9 +522,9 @@ void print_usage(char const *program_name) {
   // clang-format off
     ss << "Usage: " << program_name << " [options]" << "\n";
     ss << "Options:" << "\n";
-    ss << "  --file <path>         Path to .pgn(.gz) file" << "\n";
-    ss << "  --dir <path>          Path to directory containing .pgn(.gz) files (default: pgns)" << "\n";
-    ss << "  -r                    Search for .pgn(.gz) files recursively in subdirectories" << "\n";
+    ss << "  --file <path>         Path to .pgn([.gz|.zst]) file" << "\n";
+    ss << "  --dir <path>          Path to directory containing .pgn([.gz|.zst]) files (default: pgns)" << "\n";
+    ss << "  -r                    Search for .pgn([.gz|.zst]) files recursively in subdirectories" << "\n";
     ss << "  --noFRC               Exclude (D)FRC games (included by default)" << "\n";
     ss << "  --allowDuplicates     Allow duplicate directories for test pgns" << "\n";
     ss << "  --concurrency <N>     Number of concurrent threads to use (default: maximum)" << "\n";
@@ -593,7 +596,7 @@ int main(int argc, char const *argv[]) {
     files_pgn = get_files(path, recursive);
   }
 
-  // sort to easily check for "duplicate" files, i.e. "foo.pgn.gz" and "foo.pgn"
+  // sort to easily check for "duplicate" files, e.g. "foo.pgn.gz" and "foo.pgn"
   std::sort(files_pgn.begin(), files_pgn.end());
 
   for (size_t i = 1; i < files_pgn.size(); ++i) {
