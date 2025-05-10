@@ -45,9 +45,10 @@ fen_map_t fen_map;
 using map_meta = std::unordered_map<std::string, TestMetaData>;
 
 // set to store ignored chess variants
-using variant_set_t = phmap::parallel_flat_hash_set<
-    std::string, std::hash<std::string>, std::equal_to<std::string>,
-    std::allocator<std::string>, 8, std::mutex>;
+using variant_set_t =
+    phmap::parallel_flat_hash_set<std::string, std::hash<std::string>,
+                                  std::equal_to<std::string>,
+                                  std::allocator<std::string>, 8, std::mutex>;
 
 variant_set_t variant_set;
 
@@ -692,14 +693,6 @@ int main(int argc, char const *argv[]) {
           count_stop_early, out_file, min_count, save_count, omit_move_counter,
           tb_limit, omit_mates, min_Elo, concurrency);
 
-  if (variant_set.size()) {
-    std::cout << "The following unknown chess variants have been ignored:";
-    variant_set.for_each([](const std::string& s) {
-        std::cout << " " << s;
-    });
-    std::cout << std::endl;
-  }
-
   if (save_count) {
     for (const auto &pair : fen_map) {
       out_file << Board::Compact::decode(pair.second).getFen(false) << " ; c0 "
@@ -716,12 +709,17 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "\nRetained " << total_pos << " positions from "
             << zobrist_map.size() << " unique visited in " << total_games
-            << " games."
-            << "\nTotal time for processing: "
+            << " games.\nTotal time for processing: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
                        .count() /
                    1000.0
             << " s" << std::endl;
+
+  if (variant_set.size()) {
+    std::cout << "The following unknown chess variants have been ignored:";
+    variant_set.for_each([](const std::string &s) { std::cout << " " << s; });
+    std::cout << std::endl;
+  }
 
   return 0;
 }
