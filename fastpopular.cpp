@@ -190,6 +190,34 @@ public:
     }
   }
 
+  void add_board_hash_to_zobrist_map() {
+    std::uint64_t key = board.hash();
+    std::uint64_t value;
+
+    bool is_new_entry = zobrist_map.lazy_emplace_l(
+        std::move(key),
+        [&](zobrist_map_t::value_type &p) { value = ++p.second; },
+        [&](const zobrist_map_t::constructor &ctor) {
+          ctor(std::move(key), 1);
+          value = 1;
+        });
+
+    if (value == std::uint64_t(min_count)) {
+      total_pos++;
+      std::string fen = board.getFen(!omit_move_counter);
+      const std::lock_guard<std::mutex> lock(progress_output);
+      out_file << fen << "\n";
+    }
+
+    if (is_new_entry)
+      new_entry_count++;
+
+    if (count_stop_early == new_entry_count) {
+      this->skipPgn(true);
+      return;
+    }
+  }
+
   void startMoves() override {
     if (skip || (is960 && no_frc) || !hasResult) {
       this->skipPgn(true);
@@ -234,6 +262,8 @@ public:
       }
     }
     total_games++;
+
+    add_board_hash_to_zobrist_map();
   }
 
   void move(std::string_view move, std::string_view comment) override {
@@ -279,33 +309,8 @@ public:
     }
 
     if (!do_filter || filter_side == board.sideToMove())
-      if (comment != "book" && min_count) {
-        // std::string fen = board.getFen(false);
-        std::uint64_t key = board.hash();
-        std::uint64_t value;
-
-        bool is_new_entry = zobrist_map.lazy_emplace_l(
-            std::move(key),
-            [&](zobrist_map_t::value_type &p) { value = ++p.second; },
-            [&](const zobrist_map_t::constructor &ctor) {
-              ctor(std::move(key), 1);
-              value = 1;
-            });
-
-        if (value == std::uint64_t(min_count)) {
-          total_pos++;
-          std::string fen = board.getFen(!omit_move_counter);
-          const std::lock_guard<std::mutex> lock(progress_output);
-          out_file << fen << "\n";
-        }
-
-        if (is_new_entry)
-          new_entry_count++;
-
-        if (count_stop_early == new_entry_count) {
-          this->skipPgn(true);
-          return;
-        }
+      if (min_count) {
+        add_board_hash_to_zobrist_map();
         retained_plies++;
       }
   }
