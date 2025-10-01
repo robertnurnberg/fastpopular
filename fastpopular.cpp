@@ -775,7 +775,7 @@ int main(int argc, char const *argv[]) {
 
   if (save_count) {
     std::cout << "Obtaining counts, sorting and storing with cdfCutoff="
-              << cdf_cutoff << " ... " << std::flush;
+              << cdf_cutoff << " ... " << std::endl;
     std::ifstream file(filename);
     std::vector<std::pair<std::uint64_t, std::string>> fens;
     std::string line;
@@ -798,13 +798,19 @@ int main(int argc, char const *argv[]) {
     std::uint64_t cdf_limit =
         std::uint64_t(cdf_cutoff / 100.0 * total_visits + 0.5);
     std::uint64_t cdf = 0;
+    auto count_old = fens[0].first;
     for (const auto &pair : fens) {
-      out_file << pair.second << " ; c0 " << pair.first << "\n";
-      cdf += pair.first;
+      auto count = pair.first;
+      out_file << pair.second << " ; c0 " << count << "\n";
+      if (count < count_old) {
+        std::cout << "Change from count " << count_old << " to " << count << " happens at coverage " << cdf * 100.0 / total_visits << std::endl;
+        count_old = count;
+      }
+      cdf += count;
       if (cdf >= cdf_limit)
         break;
     }
-    std::cout << "done.\nSaved the counts accounting for "
+    std::cout << "Done.\nSaved the counts accounting for "
               << cdf * 100.0 / total_visits
               << "\% of the total visits to popular_sorted.epd." << std::endl;
     out_file.close();
