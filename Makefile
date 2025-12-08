@@ -19,7 +19,7 @@ ifeq ($(uname_S), Darwin)
 endif
 
 SRC_FILE = fastpopular.cpp
-EXE_FILE = fastpopular
+EXE_FILE = fastpopular.count
 HEADERS = fastpopular.hpp
 EXT_HEADERS = external/chess.hpp external/json.hpp external/threadpool.hpp external/parallel_hashmap/phmap.h
 EXT_BXZSTR_HEADERS = external/bxzstr/bxzstr.hpp external/bxzstr/config.hpp external/bxzstr/strict_fstream.hpp external/bxzstr/bz_stream_wrapper.hpp external/bxzstr/lzma_stream_wrapper.hpp external/bxzstr/zstd_stream_wrapper.hpp external/bxzstr/compression_types.hpp external/bxzstr/stream_wrapper.hpp external/bxzstr/z_stream_wrapper.hpp
